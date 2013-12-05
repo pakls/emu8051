@@ -223,6 +223,24 @@ cpu8051_ReadB(uint8_t bit_address)
 	return BitValue;
 }
 
+/* function pointers for interrupt callback routine */
+static int_callback interrupt_callbacks[ INTERRUPT_COUNT ];
+
+/* function pointer for clock callback routine */
+static int_callback clock_callback;
+
+void
+cpu8051_interrupt_callback_register(unsigned int no, int_callback ptr) {
+	if (no < INTERRUPT_COUNT)
+		interrupt_callbacks[ no ] = ptr;
+}
+
+void
+cpu8051_clock_callback_register(int_callback ptr)
+{
+	clock_callback = ptr;
+}
+
 static int
 cpu8051_interrupt_fire(int interrupt_no, int priority)
 {
@@ -258,12 +276,28 @@ cpu8051_CheckInterrupts(void)
 
 	for (i = INTERRUPT_PRIORITY_HIGH; i >= INTERRUPT_PRIORITY_LOW; i--) {
 		if (cpu8051.active_priority < i) {
+			/* External interrupt 0 */
+			if ( cpu8051_interrupt_enabled( INTERRUPT_0 ) &&
+			     cpu8051_interrupt_fire( INTERRUPT_0, i ) &&
+			     interrupt_callbacks[ INTERRUPT_0 ] &&
+			     interrupt_callbacks[ INTERRUPT_0 ]() ) {
+				cpu8051_process_interrupt(0x03, i);
+				return;
+			}
 			/* Interrupt timer 0 */
 			if ( cpu8051_interrupt_enabled( INTERRUPT_1 ) &&
 			     cpu8051_interrupt_fire( INTERRUPT_1, i ) &&
 			     (cpu8051_ReadD(_TCON_) & 0x20) ) {
 				cpu8051_WriteD(_TCON_, cpu8051_ReadD(_TCON_) & 0xDF);
 				cpu8051_process_interrupt(0x0B, i);
+				return;
+			}
+			/* External interrupt 1 */
+			if ( cpu8051_interrupt_enabled( INTERRUPT_2 ) &&
+			     cpu8051_interrupt_fire( INTERRUPT_2, i ) &&
+			     interrupt_callbacks[ INTERRUPT_2 ] &&
+			     interrupt_callbacks[ INTERRUPT_2 ]() ) {
+				cpu8051_process_interrupt(0x13, i);
 				return;
 			}
 			/* Interrupt timer 1 */

@@ -33,7 +33,19 @@
 #define INTERRUPT_3 (3)
 #define INTERRUPT_4 (4)
 #define INTERRUPT_5 (5)
+#define INTERRUPT_COUNT (6)
+
 #define INTERRUPT_MASK(n) (1 << n)
+
+/* Note: callback functions must return non-zero to trigger interrupt */
+typedef int (*int_callback)(void);
+
+void
+cpu8051_interrupt_callback_register(unsigned int no, int_callback ptr);
+
+void
+cpu8051_clock_callback_register(int_callback ptr);
+
 
 #define INTERRUPT_PRIORITY_HIGH     (1)
 #define INTERRUPT_PRIORITY_LOW      (0)
